@@ -12,17 +12,9 @@ export default function CheckoutForm() {
 	const [isLoading, setIsLoading] = React.useState(false);
 	const [showCountryInfo, setShowCountryInfo] = React.useState(false);
 
-	const handleSubmit = async (e) => {
+	const updateHandler = async (e) => {
 		e.preventDefault();
 		elements.submit();
-
-		if (!stripe || !elements) {
-			// Stripe.js hasn't yet loaded.
-			// Make sure to disable form submission until Stripe.js has loaded.
-			return;
-		}
-
-		setIsLoading(true);
 
 		//Set the default country to AU for PM
 		const params = {
@@ -38,52 +30,30 @@ export default function CheckoutForm() {
 			elements,
 			params: params,
 		});
-		//Retrieve the card country
-		console.log(JSON.stringify(pm.paymentMethod.card.country));
 
-		if (pm.paymentMethod.card.country !== "AU") {
-			const id = pm.paymentMethod.id.toString();
-			const country = pm.paymentMethod.card.country.toString();
-
-			//Create setup intent and obtain client secret
-			const res = await fetch("/api/create-setup-intent", {
-				method: "POST",
+		const country = pm.paymentMethod.card.country;
+		console.log(`${pm.paymentMethod.id} = ${country}`);
+		if (["US", "GB"].includes(country)) {
+			var paymentElement = elements.getElement("payment");
+			paymentElement.update({
+				fields: { billingDetails: { address: "auto" } },
+				defaultValues: { billing_details: { address: { country: "UK" } } },
 			});
+		}
+	};
 
-			//Set the billing country to card country on confirmation step
-			const { client_secret: clientSecret } = await res.json();
-			elements.submit();
-			const si = await stripe
-				.confirmSetup({
-					elements,
-					clientSecret,
-					confirmParams: {
-						return_url: "http://localhost:3000",
-						payment_method_data: {
-							billing_details: {
-								address: {
-									country: country,
-								},
-							},
-						},
-					},
-				})
-				.then(
-					//Update underling PM billing country
-					await fetch("/api/update-payment-method", {
-						headers: {
-							"Content-Type": "application/json",
-						},
-						method: "POST",
-						body: JSON.stringify({
-							id: id,
-							country: country,
-						}),
-					})
-				);
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+		elements.submit();
+
+		if (!stripe || !elements) {
+			// Stripe.js hasn't yet loaded.
+			// Make sure to disable form submission until Stripe.js has loaded.
+			return;
 		}
 
-		// If card country === AU create setup intent and obtain client secret
+		setIsLoading(true);
+
 		const res = await fetch("/api/create-setup-intent", {
 			method: "POST",
 		});
@@ -95,15 +65,10 @@ export default function CheckoutForm() {
 			clientSecret,
 			confirmParams: {
 				return_url: "http://localhost:3000",
-				payment_method_data: {
-					billing_details: {
-						address: {
-							country: "AU",
-						},
-					},
-				},
 			},
 		});
+
+		setMessage("Setup Intent Created");
 	};
 
 	const paymentElementOptions = {
@@ -118,7 +83,7 @@ export default function CheckoutForm() {
 	};
 
 	return (
-		<form id="payment-form" onSubmit={handleSubmit}>
+		<form id="payment-form" onSubmit={handleSubmit} onBlur={updateHandler}>
 			<PaymentElement id="payment-element" options={paymentElementOptions} />
 			<button
 				disabled={isLoading || !stripe || !elements}
