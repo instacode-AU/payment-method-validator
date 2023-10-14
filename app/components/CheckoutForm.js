@@ -37,7 +37,7 @@ export default function CheckoutForm() {
 			var paymentElement = elements.getElement("payment");
 			paymentElement.update({
 				fields: { billingDetails: { address: "auto" } },
-				defaultValues: { billing_details: { address: { country: "UK" } } },
+				defaultValues: { billing_details: { address: { country: country } } },
 			});
 		}
 	};
