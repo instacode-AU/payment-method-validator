@@ -83,6 +83,7 @@ export default function CheckoutForm() {
         setMessage(`No surcharge for BECS DD`);
       }
       default:
+        setMessage(`No surcharge`);
         break;
     }
   };
@@ -105,7 +106,7 @@ export default function CheckoutForm() {
 
     const { client_secret: clientSecret } = await res.json();
     elements.submit();
-    const si = await stripe.confirmSetup({
+    const si = await stripe.confirmPayment({
       elements,
       clientSecret,
       confirmParams: {
@@ -113,7 +114,7 @@ export default function CheckoutForm() {
       },
     });
 
-    setMessage("Setup Intent Created");
+    setMessage("Payment Intent Created");
   };
 
   const paymentElementOptions = {
